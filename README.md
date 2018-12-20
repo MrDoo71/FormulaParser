@@ -30,3 +30,49 @@ returns:
   </operation>
 </operation>
 ```
+
+## Output XML
+
+Output tags are:
+
+
+```
+<operation type="TYPE"> p1, p2 
+</operation>
+Where TYPE in: add, multiply, divide, subtract, power, greaterThan, lessThan, greaterThanOrEqual, lessThanOrEqual, equalTo, notEqualTo.
+```
+
+```
+<operation type="ternary"> if, then, else 
+</operation>
+```
+
+```
+<parenthesis>
+</parenthesis>
+```
+
+```
+<function type="FUNC">
+</function>
+Where FUNC is the function name. 
+```
+
+```
+<variable custom="true" hash="false">
+</variable>
+The parameters custom and hash are binary flags indicating that the variable name starts with @ or # respectively.
+```
+
+```
+<decimal>3.1415</decimal>
+```
+
+```
+<integer>10</integer>
+```
+
+
+
+
+
