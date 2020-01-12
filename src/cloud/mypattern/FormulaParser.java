@@ -861,7 +861,7 @@ public class FormulaParser
             xmlStream.writeStartDocument();      
             
             expression.marshallXML( xmlStream );
-            
+            xmlStream.flush();
             out.flush();
             return out.toString();
                         
