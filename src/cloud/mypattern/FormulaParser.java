@@ -45,23 +45,25 @@ public class FormulaParser
 {
 
     //Operators.
-    private static final int OP_NONE            = 0;
-    private static final int OP_MULT            = 1;
-    private static final int OP_ADD             = 2;
-    private static final int OP_DIVIDE          = 3;
-    private static final int OP_SUBTRACT        = 4;
-    private static final int OP_POWER           = 5;
-    private static final int OP_TERNARY         = 6;
-    private static final int OP_GREATERTHAN     = 7;
-    private static final int OP_LESSTHAN        = 8;
-    private static final int OP_EQUALS          = 9;
-    private static final int OP_NOTEQUALS       = 10;
-    private static final int OP_GREATERTHANOREQ = 11;
-    private static final int OP_LESSTHANOREQ    = 12;
+    static final int OP_NONE            = 0;
+    static final int OP_MULT            = 1;
+    static final int OP_ADD             = 2;
+    static final int OP_DIVIDE          = 3;
+    static final int OP_SUBTRACT        = 4;
+    static final int OP_POWER           = 5;
+    static final int OP_TERNARY         = 6;
+    static final int OP_GREATERTHAN     = 7;
+    static final int OP_LESSTHAN        = 8;
+    static final int OP_EQUALS          = 9;
+    static final int OP_NOTEQUALS       = 10;
+    static final int OP_GREATERTHANOREQ = 11;
+    static final int OP_LESSTHANOREQ    = 12;
     
     //These can not validly be included in any token    
-    char[] delimiters = {' ', '\n', '\t', '(', ')', '*', '+', '-', '/', '^', ',', ';',':','<','>','?' };
+    char[] delimiters = {' ', '\n', '\t', '(', ')', '*', '+', '-', '/', '^', ',', ';',':','<','>','?','=' };
     
+    
+    private static boolean debug = false;
     
     /** 
      * A part of the formula.
@@ -496,6 +498,8 @@ public class FormulaParser
      */
     private Expression parseExpressionParameter( Stream s, int precedence ) throws Stream.SyntaxException
     {
+        if ( debug ) System.out.println( "parseExpressionParameter() precedence:" + precedence );
+        
         if ( s.isTokenDelimeter( s.lookahead(), new char[]{'+','*','/','^'} ) ) //nb '-' is permitted here because it might be: -1
         {
             throw s.throwException( "Unexpected token (operator not expected here):" + s.lookahead() );
@@ -627,15 +631,26 @@ public class FormulaParser
                     }                
                 }
             }
-        }        
+        }
+
+        if ( debug ) System.out.println( "token parsed:" + e );
         
         s.consumeOptionalWhiteSpace();
         int operator = getOperatorFromLookahead(s);
         int nextPrecedence = getOperatorPrecedence( operator );
         
-        if ( nextPrecedence > precedence )
+        if ( debug ) System.out.println( "lookahead operator:" + operator + " lookahead precedence:" + nextPrecedence );
+        
+        if (( nextPrecedence > precedence ) && ( operator != OP_TERNARY ))
         {
-            assert operator != OP_TERNARY; //as this is the lowest precedence
+            if ( debug ) System.out.println( "lookahead precedence greater..."  );
+            
+            if ( operator == OP_TERNARY )
+            {
+                System.out.println("Weird");
+            }
+            
+            //assert operator != OP_TERNARY; //as this is the lowest precedence (WAS)
             
             s.consumeChar(); //the operator.
             
@@ -668,6 +683,12 @@ public class FormulaParser
             twoOp.parameter2 = parseExpression( s, nextPrecedence );
             e = twoOp;
         }
+        else
+        {
+            if ( debug ) System.out.println( "lookahead precedence lower..."  );
+        }
+        
+        if ( debug ) System.out.println( "parseExpressionParameter() returning:" + e );
         
         return e;
     }
@@ -685,11 +706,15 @@ public class FormulaParser
      */
     private Expression parseExpression( Stream s, int precedence ) throws Stream.SyntaxException
     {
+        if ( debug ) System.out.println( "parseExpression() precedence:" + precedence );
+        
         int operation = OP_NONE; //might just be a bracketted expression. 
         
         s.consumeOptionalWhiteSpace();
 
         Expression expression = parseExpressionParameter( s, precedence );
+                
+        if ( debug ) System.out.println( "initial expression:" + expression );
         
         s.consumeOptionalWhiteSpace();
         
@@ -727,11 +752,18 @@ public class FormulaParser
             }
 
             int nextPrecedence = getOperatorPrecedence( operation );
+            
+            if ( debug ) System.out.println( "lookahead operation:" + operation + " lookahead precedence:" + nextPrecedence );
+            
 //TODO why does this fail with 3.1415 * 22 + @width * height 
 //            assert nextPrecedence <= precedence; //otherwise it would have got handled by parseExpressionParameter
             
-            if ( nextPrecedence < precedence )
+            if ( nextPrecedence <= precedence ) 
+            {
+                if ( debug ) System.out.println( "lookahead precendence lower, returning:" + expression );
+                
                 return expression;
+            }
 
             if ( operation == OP_TERNARY )
             {
@@ -755,15 +787,20 @@ public class FormulaParser
 
                 s.consumeChar(); //the operator
                 s.consumeOptionalWhiteSpace();
+                
+                if ( debug ) System.out.println( "doing operation:" + operation + " of " + expression + " and..." );
 
-                twoOp.parameter2 = parseExpressionParameter( s, precedence );
+                twoOp.parameter2 = parseExpressionParameter( s, nextPrecedence );
 
+                if ( debug ) System.out.println( "giving combined expression:" + twoOp );
+                
                 expression = twoOp;    
             }
                         
             s.consumeOptionalWhiteSpace();
         }
         
+        if ( debug ) System.out.println( "parseExpression() returning expression:" + expression );
         return expression;
     }
     
@@ -793,7 +830,7 @@ public class FormulaParser
                 
             case
                 OP_TERNARY:
-                return 1;
+                return 2;
                     
             default:     
                 return 0;
